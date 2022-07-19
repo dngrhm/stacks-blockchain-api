@@ -2898,6 +2898,7 @@ paths:
           schema:
             type: integer
             default: 50
+            example: 100
         - name: offset
           in: query
           description: index of first tokens to fetch
@@ -2905,6 +2906,7 @@ paths:
           schema:
             type: integer
             default: 0
+            example: 42000
         - name: unanchored
           in: query
           description: whether or not to include tokens from unconfirmed transactions
@@ -2912,6 +2914,7 @@ paths:
           schema:
             type: boolean
             default: false
+            example: true
         - name: tx_metadata
           in: query
           description: whether or not to include the complete transaction metadata instead of just `tx_id`. Enabling this option can affect performance and response times.
@@ -2919,6 +2922,7 @@ paths:
           schema:
             type: boolean
             default: false
+            example: true
       responses:
         200:
           description: List of Non-Fungible Token holdings
@@ -2966,6 +2970,7 @@ paths:
           schema:
             type: integer
             default: 50
+            example: 100
         - name: offset
           in: query
           description: index of first event to fetch
@@ -2987,6 +2992,7 @@ paths:
           schema:
             type: boolean
             default: false
+            example: 100
       responses:
         200:
           description: Non-Fungible Token event history
@@ -3027,6 +3033,7 @@ paths:
           schema:
             type: integer
             default: 50
+            example: 100
         - name: offset
           in: query
           description: index of first event to fetch
@@ -3034,6 +3041,7 @@ paths:
           schema:
             type: integer
             default: 0
+            example: 42000
         - name: unanchored
           in: query
           description: whether or not to include events from unconfirmed transactions
@@ -3041,6 +3049,7 @@ paths:
           schema:
             type: boolean
             default: false
+            example: true
         - name: tx_metadata
           in: query
           description: whether or not to include the complete transaction metadata instead of just `tx_id`. Enabling this option can affect performance and response times.
@@ -3048,6 +3057,7 @@ paths:
           schema:
             type: boolean
             default: false
+            example: true
       responses:
         200:
           description: Non-Fungible Token mints
