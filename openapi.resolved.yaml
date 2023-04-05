@@ -1,8 +1,8 @@
 openapi: 3.0.2
 servers:
-  - url: https://stacks-node-api.mainnet.stacks.co/
+  - url: https://api.mainnet.hiro.so/
     description: Mainnet
-  - url: https://stacks-node-api.testnet.stacks.co/
+  - url: https://api.testnet.hiro.so/
     description: Testnet
   - url: http://localhost:3999/
     description: Local
@@ -105,7 +105,7 @@ paths:
 
         The endpoint returns the transaction ID, which you can use to view the transaction in the
 
-        [Stacks Explorer](https://explorer.stacks.co/?chain=testnet). The tokens are delivered once the transaction has
+        [Stacks Explorer](https://explorer.hiro.so/?chain=testnet). The tokens are delivered once the transaction has
 
         been included in an anchor block.
 
@@ -234,19 +234,21 @@ paths:
             type: integer
             default: 96
             maximum: 200
+            example: 100
         - name: offset
           in: query
           description: index of first transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: type
           in: query
           description: Filter by transaction type
           required: false
           schema:
             type: array
+            example: coinbase
             items:
               type: string
               enum:
@@ -360,6 +362,7 @@ paths:
           required: false
           schema:
             type: string
+            example: SP1GPBP8NBRXDRJBFQBV7KMAZX1Z7W2RFWJEH0V10
         - name: recipient_address
           in: query
           description: Filter to only return transactions with this recipient address
@@ -380,15 +383,16 @@ paths:
           required: false
           schema:
             type: integer
-            default: 96
-            maximum: 200
+            default: 20
+            maximum: 50
+            example: 20
         - name: offset
           in: query
           description: index of first mempool transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -437,9 +441,8 @@ paths:
                                 between all Stacks 2.0 transaction types
                               type: object
                               allOf:
-                                - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                                    ntent/application~1json/schema/allOf/0/allO\
-                                    f/0"
+                                - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                                    ation~1json/schema/anyOf/0/allOf/0/allOf/0"
                                 - required:
                                     - tx_status
                                     - receipt_time
@@ -475,8 +478,8 @@ paths:
                             - $ref: "#/paths/~1extended~1v1~1tx~1mempool/get/responses/200/content/applicatio\
                                 n~1json/schema/properties/results/items/anyOf/0\
                                 /allOf/0"
-                            - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                                ntent/application~1json/schema/allOf/1"
+                            - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                                ation~1json/schema/anyOf/1/allOf/1"
                         - type: object
                           title: MempoolContractCallTransaction
                           description: "Describes representation of a Type 2 Stacks 2.0 transaction:
@@ -755,9 +758,9 @@ paths:
           in: query
           description: index of first mempool transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of dropped mempool transactions
@@ -769,6 +772,412 @@ paths:
               example:
                 $ref: "#/paths/~1extended~1v1~1tx~1mempool/get/responses/200/content/applicatio\
                   n~1json/example"
+  /extended/v1/tx/mempool/stats:
+    get:
+      summary: Get statistics for mempool transactions
+      tags:
+        - Transactions
+      operationId: get_mempool_transaction_stats
+      description: >
+        Queries for transactions counts, age (by block height), fees (simple
+        average), and size.
+
+        All results broken down by transaction type and percentiles (p25, p50, p75, p95).
+      responses:
+        "200":
+          description: Statistics for mempool transactions
+          content:
+            application/json:
+              schema:
+                description: GET request that returns stats on mempool transactions
+                title: MempoolTransactionStatsResponse
+                type: object
+                additionalProperties: false
+                required:
+                  - tx_type_counts
+                  - tx_simple_fee_averages
+                  - tx_ages
+                  - tx_byte_sizes
+                properties:
+                  tx_type_counts:
+                    type: object
+                    description: Number of tranasction in the mempool, broken down by transaction
+                      type.
+                    additionalProperties: false
+                    required:
+                      - token_transfer
+                      - smart_contract
+                      - contract_call
+                      - poison_microblock
+                    properties:
+                      token_transfer:
+                        type: number
+                      smart_contract:
+                        type: number
+                      contract_call:
+                        type: number
+                      poison_microblock:
+                        type: number
+                  tx_simple_fee_averages:
+                    type: object
+                    description: The simple mean (average) transaction fee, broken down by
+                      transaction type. Note that this does not factor in actual
+                      execution costs. The average fee is not a reliable metric
+                      for calculating a fee for a new transaction.
+                    additionalProperties: false
+                    required:
+                      - token_transfer
+                      - smart_contract
+                      - contract_call
+                      - poison_microblock
+                    properties:
+                      token_transfer:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      smart_contract:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      contract_call:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      poison_microblock:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                  tx_ages:
+                    type: object
+                    description: The average time (in blocks) that transactions have lived in the
+                      mempool. The start block height is simply the current
+                      chain-tip of when the attached Stacks node receives the
+                      transaction. This timing can be different across Stacks
+                      nodes / API instances due to propagation timing
+                      differences in the p2p network.
+                    additionalProperties: false
+                    required:
+                      - token_transfer
+                      - smart_contract
+                      - contract_call
+                      - poison_microblock
+                    properties:
+                      token_transfer:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      smart_contract:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      contract_call:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      poison_microblock:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                  tx_byte_sizes:
+                    type: object
+                    description: The average byte size of transactions in the mempool, broken down
+                      by transaction type.
+                    additionalProperties: false
+                    required:
+                      - token_transfer
+                      - smart_contract
+                      - contract_call
+                      - poison_microblock
+                    properties:
+                      token_transfer:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      smart_contract:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      contract_call:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+                      poison_microblock:
+                        type: object
+                        additionalProperties: false
+                        required:
+                          - p25
+                          - p50
+                          - p75
+                          - p95
+                        properties:
+                          p25:
+                            type: number
+                            nullable: true
+                          p50:
+                            type: number
+                            nullable: true
+                          p75:
+                            type: number
+                            nullable: true
+                          p95:
+                            type: number
+                            nullable: true
+              example:
+                tx_type_counts:
+                  token_transfer: 130
+                  smart_contract: 2
+                  contract_call: 310
+                  poison_microblock: 0
+                tx_simple_fee_averages:
+                  token_transfer:
+                    p25: 3000
+                    p50: 3000
+                    p75: 6000
+                    p95: 401199.9999999995
+                  smart_contract:
+                    p25: 837500
+                    p50: 925000
+                    p75: 1012500
+                    p95: 1082500
+                  contract_call:
+                    p25: 3000
+                    p50: 10368
+                    p75: 100000
+                    p95: 1000000
+                  poison_microblock:
+                    ? p25
+                    ? p50
+                    ? p75
+                    ? p95
+                tx_ages:
+                  token_transfer:
+                    p25: 167.5
+                    p50: 45
+                    p75: 1
+                    p95: 0
+                  smart_contract:
+                    p25: 185.5
+                    p50: 129
+                    p75: 72.5
+                    p95: 27.30000000000001
+                  contract_call:
+                    p25: 189
+                    p50: 127.5
+                    p75: 9.5
+                    p95: 0
+                  poison_microblock:
+                    ? p25
+                    ? p50
+                    ? p75
+                    ? p95
+                tx_byte_sizes:
+                  token_transfer:
+                    p25: 180
+                    p50: 180
+                    p75: 180
+                    p95: 180
+                  smart_contract:
+                    p25: 706.75
+                    p50: 814.5
+                    p75: 922.25
+                    p95: 1008.45
+                  contract_call:
+                    p25: 291
+                    p50: 435
+                    p75: 462
+                    p95: 597
+                  poison_microblock:
+                    ? p25
+                    ? p50
+                    ? p75
+                    ? p95
   /extended/v1/tx/multiple:
     parameters:
       - name: tx_id
@@ -777,6 +1186,7 @@ paths:
         required: true
         schema:
           type: array
+          example: "0x0a411719e3bfde95f9e227a2d7f8fac3d6c646b1e6cc186db0e2838a2c6cd9c0"
           items:
             type: string
       - name: event_offset
@@ -959,6 +1369,7 @@ paths:
         required: true
         schema:
           type: string
+          example: "0x0a411719e3bfde95f9e227a2d7f8fac3d6c646b1e6cc186db0e2838a2c6cd9c0"
       - name: event_offset
         in: query
         schema:
@@ -1004,8 +1415,398 @@ paths:
                       https://github.com/blockstack/stacks-blockchain/blob/master/sip/sip-005-blocks-and-transactions.md#type-0-transferring-an-asset
                     type: object
                     allOf:
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/0"
+                      - title: AbstractTransaction
+                        description: Anchored transaction metadata. All mined/anchored Stacks
+                          transactions have these properties.
+                        type: object
+                        allOf:
+                          - title: BaseTransaction
+                            description: Transaction properties that are available from a raw serialized
+                              transactions. These are available for transactions
+                              in the mempool as well as mined transactions.
+                            type: object
+                            required:
+                              - tx_id
+                              - nonce
+                              - fee_rate
+                              - sender_address
+                              - sponsored
+                              - post_condition_mode
+                              - post_conditions
+                              - anchor_mode
+                            additionalProperties: false
+                            properties:
+                              tx_id:
+                                type: string
+                                description: Transaction ID
+                              nonce:
+                                type: integer
+                                description: Used for ordering the transactions originating from and paying from
+                                  an account. The nonce ensures that a
+                                  transaction is processed at most once. The
+                                  nonce counts the number of times an account's
+                                  owner(s) have authorized a transaction. The
+                                  first transaction from an account will have a
+                                  nonce value equal to 0, the second will have a
+                                  nonce value equal to 1, and so on.
+                              fee_rate:
+                                type: string
+                                description: Transaction fee as Integer string (64-bit unsigned integer).
+                              sender_address:
+                                type: string
+                                description: Address of the transaction initiator
+                              sponsor_nonce:
+                                type: integer
+                              sponsored:
+                                type: boolean
+                                description: Denotes whether the originating account is the same as the paying
+                                  account
+                              sponsor_address:
+                                type: string
+                              post_condition_mode:
+                                title: PostConditionMode
+                                description: ""
+                                type: string
+                                enum:
+                                  - allow
+                                  - deny
+                              post_conditions:
+                                type: array
+                                items:
+                                  title: PostCondition
+                                  description: Post-conditionscan limit the damage done to a user's assets
+                                  anyOf:
+                                    - title: PostConditionStx
+                                      type: object
+                                      allOf:
+                                        - type: object
+                                          required:
+                                            - principal
+                                          additionalProperties: false
+                                          properties:
+                                            principal:
+                                              title: PostConditionPrincipal
+                                              type: object
+                                              anyOf:
+                                                - type: object
+                                                  additionalProperties: false
+                                                  description: Principal Origin
+                                                  required:
+                                                    - type_id
+                                                  properties:
+                                                    type_id:
+                                                      type: string
+                                                      description: String literal of type `PostConditionPrincipalType`
+                                                      enum:
+                                                        - principal_origin
+                                                - type: object
+                                                  description: Principal Standard
+                                                  required:
+                                                    - type_id
+                                                    - address
+                                                  additionalProperties: false
+                                                  properties:
+                                                    type_id:
+                                                      type: string
+                                                      description: String literal of type `PostConditionPrincipalType`
+                                                      enum:
+                                                        - principal_standard
+                                                    address:
+                                                      type: string
+                                                - type: object
+                                                  description: Principal Contract
+                                                  required:
+                                                    - type_id
+                                                    - address
+                                                    - contract_name
+                                                  additionalProperties: false
+                                                  properties:
+                                                    type_id:
+                                                      type: string
+                                                      description: String literal of type `PostConditionPrincipalType`
+                                                      enum:
+                                                        - principal_contract
+                                                    address:
+                                                      type: string
+                                                    contract_name:
+                                                      type: string
+                                        - type: object
+                                          required:
+                                            - condition_code
+                                            - amount
+                                            - type
+                                          additionalProperties: false
+                                          properties:
+                                            condition_code:
+                                              title: PostConditionFungibleConditionCode
+                                              description: A fungible condition code encodes a statement being made for either
+                                                STX or a fungible token, with
+                                                respect to the originating
+                                                account.
+                                              type: string
+                                              enum:
+                                                - sent_equal_to
+                                                - sent_greater_than
+                                                - sent_greater_than_or_equal_to
+                                                - sent_less_than
+                                                - sent_less_than_or_equal_to
+                                            amount:
+                                              type: string
+                                            type:
+                                              enum:
+                                                - stx
+                                              type: string
+                                    - title: PostConditionFungible
+                                      type: object
+                                      allOf:
+                                        - type: object
+                                          required:
+                                            - principal
+                                          additionalProperties: false
+                                          properties:
+                                            principal:
+                                              $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                                                ation~1json/schema/anyOf/0/allO\
+                                                f/0/allOf/0/properties/post_con\
+                                                ditions/items/anyOf/0/allOf/0/p\
+                                                roperties/principal"
+                                        - type: object
+                                          required:
+                                            - condition_code
+                                            - amount
+                                            - type
+                                            - asset
+                                          additionalProperties: false
+                                          properties:
+                                            condition_code:
+                                              $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                                                ation~1json/schema/anyOf/0/allO\
+                                                f/0/allOf/0/properties/post_con\
+                                                ditions/items/anyOf/0/allOf/1/p\
+                                                roperties/condition_code"
+                                            type:
+                                              enum:
+                                                - fungible
+                                              type: string
+                                            amount:
+                                              type: string
+                                            asset:
+                                              type: object
+                                              required:
+                                                - asset_name
+                                                - contract_address
+                                                - contract_name
+                                              additionalProperties: false
+                                              properties:
+                                                asset_name:
+                                                  type: string
+                                                contract_address:
+                                                  type: string
+                                                contract_name:
+                                                  type: string
+                                    - title: PostConditionNonFungible
+                                      type: object
+                                      allOf:
+                                        - type: object
+                                          required:
+                                            - principal
+                                          additionalProperties: false
+                                          properties:
+                                            principal:
+                                              $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                                                ation~1json/schema/anyOf/0/allO\
+                                                f/0/allOf/0/properties/post_con\
+                                                ditions/items/anyOf/0/allOf/0/p\
+                                                roperties/principal"
+                                        - type: object
+                                          required:
+                                            - condition_code
+                                            - type
+                                            - asset_value
+                                            - asset
+                                          additionalProperties: false
+                                          properties:
+                                            condition_code:
+                                              title: PostConditionNonFungibleConditionCode
+                                              description: A non-fungible condition code encodes a statement being made about
+                                                a non-fungible token, with
+                                                respect to whether or not the
+                                                particular non-fungible token is
+                                                owned by the account.
+                                              type: string
+                                              enum:
+                                                - sent
+                                                - not_sent
+                                            type:
+                                              enum:
+                                                - non_fungible
+                                              type: string
+                                            asset_value:
+                                              type: object
+                                              additionalProperties: false
+                                              required:
+                                                - hex
+                                                - repr
+                                              properties:
+                                                hex:
+                                                  type: string
+                                                repr:
+                                                  type: string
+                                            asset:
+                                              type: object
+                                              required:
+                                                - asset_name
+                                                - contract_address
+                                                - contract_name
+                                              additionalProperties: false
+                                              properties:
+                                                asset_name:
+                                                  type: string
+                                                contract_address:
+                                                  type: string
+                                                contract_name:
+                                                  type: string
+                              anchor_mode:
+                                title: TransactionAnchorModeType
+                                type: string
+                                enum:
+                                  - on_chain_only
+                                  - off_chain_only
+                                  - any
+                                description: "`on_chain_only`: the transaction MUST be included in an anchored
+                                  block, `off_chain_only`: the transaction MUST
+                                  be included in a microblock, `any`: the leader
+                                  can choose where to include the transaction."
+                          - required:
+                              - tx_index
+                              - block_hash
+                              - block_height
+                              - burn_block_time
+                              - burn_block_time_iso
+                              - parent_burn_block_time
+                              - parent_burn_block_time_iso
+                              - canonical
+                              - tx_status
+                              - tx_result
+                              - events
+                              - event_count
+                              - parent_block_hash
+                              - is_unanchored
+                              - microblock_hash
+                              - microblock_sequence
+                              - microblock_canonical
+                              - execution_cost_read_count
+                              - execution_cost_read_length
+                              - execution_cost_runtime
+                              - execution_cost_write_count
+                              - execution_cost_write_length
+                            additionalProperties: false
+                            properties:
+                              block_hash:
+                                type: string
+                                description: Hash of the blocked this transactions was associated with
+                              block_height:
+                                type: integer
+                                description: Height of the block this transactions was associated with
+                              burn_block_time:
+                                type: integer
+                                description: Unix timestamp (in seconds) indicating when this block was mined
+                              burn_block_time_iso:
+                                type: string
+                                description: An ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ) timestamp indicating when
+                                  this block was mined.
+                              parent_burn_block_time:
+                                type: integer
+                                description: Unix timestamp (in seconds) indicating when this parent block was
+                                  mined
+                              parent_burn_block_time_iso:
+                                type: string
+                                description: An ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ) timestamp indicating when
+                                  this parent block was mined.
+                              canonical:
+                                type: boolean
+                                description: Set to `true` if block corresponds to the canonical chain tip
+                              tx_index:
+                                type: integer
+                                description: Index of the transaction, indicating the order. Starts at `0` and
+                                  increases with each transaction
+                              tx_status:
+                                title: TransactionStatus
+                                description: Status of the transaction
+                                type: string
+                                enum:
+                                  - success
+                                  - abort_by_response
+                                  - abort_by_post_condition
+                              tx_result:
+                                type: object
+                                required:
+                                  - hex
+                                  - repr
+                                description: Result of the transaction. For contract calls, this will show the
+                                  value returned by the call. For other
+                                  transaction types, this will return a boolean
+                                  indicating the success of the transaction.
+                                additionalProperties: false
+                                properties:
+                                  hex:
+                                    type: string
+                                    description: Hex string representing the value fo the transaction result
+                                  repr:
+                                    type: string
+                                    description: Readable string of the transaction result
+                              event_count:
+                                type: integer
+                                description: Number of transaction events
+                              parent_block_hash:
+                                type: string
+                                description: Hash of the previous block.
+                              is_unanchored:
+                                type: boolean
+                                description: True if the transaction is included in a microblock that has not
+                                  been confirmed by an anchor block.
+                              microblock_hash:
+                                type: string
+                                description: The microblock hash that this transaction was streamed in. If the
+                                  transaction was batched in an anchor block
+                                  (not included within a microblock) then this
+                                  value will be an empty string.
+                              microblock_sequence:
+                                type: integer
+                                description: The microblock sequence number that this transaction was streamed
+                                  in. If the transaction was batched in an
+                                  anchor block (not included within a
+                                  microblock) then this value will be 2147483647
+                                  (0x7fffffff, the max int32 value), this value
+                                  preserves logical transaction ordering on
+                                  (block_height, microblock_sequence, tx_index).
+                              microblock_canonical:
+                                type: boolean
+                                description: Set to `true` if microblock is anchored in the canonical chain tip,
+                                  `false` if the transaction was orphaned in a
+                                  micro-fork.
+                              execution_cost_read_count:
+                                type: integer
+                                description: Execution cost read count.
+                              execution_cost_read_length:
+                                type: integer
+                                description: Execution cost read length.
+                              execution_cost_runtime:
+                                type: integer
+                                description: Execution cost runtime.
+                              execution_cost_write_count:
+                                type: integer
+                                description: Execution cost write count.
+                              execution_cost_write_length:
+                                type: integer
+                                description: Execution cost write length.
+                              events:
+                                type: array
+                                description: List of transaction events
+                                items:
+                                  $ref: "#/paths/~1extended~1v1~1address~1%7Bprincipal%7D~1assets/get/responses/2\
+                                    00/content/application~1json/schema/propert\
+                                    ies/results/items"
                       - title: TokenTransferTransactionMetadata
                         description: Metadata associated with token-transfer type transactions
                         type: object
@@ -1040,17 +1841,47 @@ paths:
                     description: Describes representation of a Type-1 Stacks 2.0 transaction.
                       https://github.com/blockstack/stacks-blockchain/blob/master/sip/sip-005-blocks-and-transactions.md#type-1-instantiating-a-smart-contract
                     allOf:
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/0"
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/1"
+                      - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                          ation~1json/schema/anyOf/0/allOf/0"
+                      - type: object
+                        title: SmartContractTransactionMetadata
+                        description: Metadata associated with a contract-deploy type transaction.
+                          https://github.com/blockstack/stacks-blockchain/blob/master/sip/sip-005-blocks-and-transactions.md#type-1-instantiating-a-smart-contract
+                        required:
+                          - tx_type
+                          - smart_contract
+                        additionalProperties: false
+                        properties:
+                          tx_type:
+                            type: string
+                            enum:
+                              - smart_contract
+                          smart_contract:
+                            type: object
+                            additionalProperties: false
+                            required:
+                              - contract_id
+                              - source_code
+                            properties:
+                              clarity_version:
+                                type: number
+                                description: The Clarity version of the contract, only specified for versioned
+                                  contract transactions, otherwise null
+                                nullable: true
+                              contract_id:
+                                type: string
+                                description: Contract identifier formatted as
+                                  `<principaladdress>.<contract_name>`
+                              source_code:
+                                type: string
+                                description: Clarity code of the smart contract being deployed
                   - type: object
                     title: ContractCallTransaction
                     description: "Describes representation of a Type 2 Stacks 2.0 transaction:
                       Contract Call"
                     allOf:
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/0"
+                      - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                          ation~1json/schema/anyOf/0/allOf/0"
                       - type: object
                         title: ContractCallTransactionMetadata
                         description: Metadata associated with a contract-call type transaction
@@ -1107,8 +1938,8 @@ paths:
                     description: "Describes representation of a Type 3 Stacks 2.0 transaction:
                       Poison Microblock"
                     allOf:
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/0"
+                      - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                          ation~1json/schema/anyOf/0/allOf/0"
                       - type: object
                         title: PoisonMicroblockTransactionMetadata
                         description: Metadata associated with a poison-microblock type transaction
@@ -1139,8 +1970,8 @@ paths:
                     description: "Describes representation of a Type 3 Stacks 2.0 transaction:
                       Poison Microblock"
                     allOf:
-                      - $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                          ntent/application~1json/schema/allOf/0"
+                      - $ref: "#/paths/~1extended~1v1~1tx~1%7Btx_id%7D/get/responses/200/content/applic\
+                          ation~1json/schema/anyOf/0/allOf/0"
                       - type: object
                         title: CoinbaseTransactionMetadata
                         description: "Describes representation of a Type 3 Stacks 2.0 transaction:
@@ -1163,6 +1994,14 @@ paths:
                               data:
                                 type: string
                                 description: Hex encoded 32-byte scratch space for block leader's use
+                              alt_recipient:
+                                type: string
+                                nullable: true
+                                description: A principal that will receive the miner rewards for this coinbase
+                                  transaction. Can be either a standard
+                                  principal or contract principal. Only
+                                  specified for `coinbase-to-alt-recipient`
+                                  transaction types, otherwise null.
               example:
                 tx_id: "0x5e9f3933e358df6a73fec0d47ce3e1062c20812c129f5294e6f37a8d27c051d9"
                 tx_status: success
@@ -1195,6 +2034,7 @@ paths:
         required: true
         schema:
           type: string
+          example: "0x0a411719e3bfde95f9e227a2d7f8fac3d6c646b1e6cc186db0e2838a2c6cd9c0"
     get:
       summary: Get Raw Transaction
       tags:
@@ -1237,8 +2077,8 @@ paths:
             schema:
               type: string
               format: binary
-            example: binary format of
-              00000000010400bed38c2aadffa348931bcb542880ff79d607afec000000000000000000000000000000c800012b0b1fff6cccd0974966dcd665835838f0985be508e1322e09fb3d751eca132c492bda720f9ef1768d14fdabed6127560ba52d5e3ac470dcb60b784e97dc88c9030200000000000516df0ba3e79792be7be5e50a370289accfc8c9e032000000000000303974657374206d656d6f00000000000000000000000000000000000000000000000000
+              example: binary format of
+                00000000010400bed38c2aadffa348931bcb542880ff79d607afec000000000000000000000000000000c800012b0b1fff6cccd0974966dcd665835838f0985be508e1322e09fb3d751eca132c492bda720f9ef1768d14fdabed6127560ba52d5e3ac470dcb60b784e97dc88c9030200000000000516df0ba3e79792be7be5e50a370289accfc8c9e032000000000000303974657374206d656d6f00000000000000000000000000000000000000000000000000
       responses:
         "200":
           description: Transaction id of successful post of a raw tx to the node's mempool
@@ -1246,7 +2086,7 @@ paths:
             text/plain:
               schema:
                 type: string
-                example: '"e161978626f216b2141b156ade10501207ae535fa365a13ef5d7a7c9310a09f2"'
+                example: e161978626f216b2141b156ade10501207ae535fa365a13ef5d7a7c9310a09f2
         "400":
           description: Rejections result in a 400 error
           content:
@@ -1308,10 +2148,9 @@ paths:
           in: query
           description: Index of the first microblock to fetch
           required: false
-          example: 42000
           schema:
             type: integer
-            example: 1000
+            example: 42000
       responses:
         "200":
           description: List of microblocks
@@ -1423,7 +2262,7 @@ paths:
         required: true
         schema:
           type: string
-          example: 1.9425303101036054e+75
+          example: "0x3bfcdf84b3012adb544cf0f6df4835f93418c2269a3881885e27b3d58eb82d47"
     get:
       summary: Get microblock
       description: Retrieves a specific microblock by `hash`
@@ -1570,9 +2409,9 @@ paths:
           in: query
           description: index of first block to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of blocks
@@ -1611,6 +2450,7 @@ paths:
                         - canonical
                         - height
                         - hash
+                        - index_block_hash
                         - parent_block_hash
                         - txs
                         - burn_block_time
@@ -1627,6 +2467,7 @@ paths:
                         - execution_cost_runtime
                         - execution_cost_write_count
                         - execution_cost_write_length
+                        - microblock_tx_count
                       properties:
                         canonical:
                           type: boolean
@@ -1637,6 +2478,10 @@ paths:
                         hash:
                           type: string
                           description: Hash representing the block
+                        index_block_hash:
+                          type: string
+                          description: The only hash that can uniquely identify an anchored block or an
+                            unconfirmed state trie
                         parent_block_hash:
                           type: string
                           description: Hash of the parent block
@@ -1715,6 +2560,11 @@ paths:
                         execution_cost_write_length:
                           type: integer
                           description: Execution cost write length.
+                        microblock_tx_count:
+                          type: object
+                          description: List of txs counts in each accepted microblock
+                          additionalProperties:
+                            type: number
               example:
                 limit: 1
                 offset: 0
@@ -1770,10 +2620,10 @@ paths:
       - name: hash
         in: path
         description: Hash of the block
-        example: 8.640313066587451e+76
         required: true
         schema:
           type: string
+          example: "0x4839a8b01cfb39ffcc0d07d3db31e848d5adf5279d529ed5062300b9f353ff79"
     get:
       summary: Get block by hash
       description: Retrieves block details of a specific block for a given chain
@@ -1796,6 +2646,7 @@ paths:
                   - canonical
                   - height
                   - hash
+                  - index_block_hash
                   - parent_block_hash
                   - txs
                   - burn_block_time
@@ -1812,6 +2663,7 @@ paths:
                   - execution_cost_runtime
                   - execution_cost_write_count
                   - execution_cost_write_length
+                  - microblock_tx_count
                 properties:
                   canonical:
                     type: boolean
@@ -1822,6 +2674,10 @@ paths:
                   hash:
                     type: string
                     description: Hash representing the block
+                  index_block_hash:
+                    type: string
+                    description: The only hash that can uniquely identify an anchored block or an
+                      unconfirmed state trie
                   parent_block_hash:
                     type: string
                     description: Hash of the parent block
@@ -1896,10 +2752,17 @@ paths:
                   execution_cost_write_length:
                     type: integer
                     description: Execution cost write length.
+                  microblock_tx_count:
+                    type: object
+                    description: List of txs counts in each accepted microblock
+                    additionalProperties:
+                      type: number
               example:
                 canonical: true
                 height: 3275
                 hash: "0xe77ba8cf6bb7c0e4f64adc83356289ed467d31a22354907b4bb814590058430f"
+                index_block_hash: "0x918697ef63f9d8bdf844c3312b299e72a231cde542f3173f7755bb8c1c\
+                  daf3a7"
                 parent_block_hash: "0x75ab21ef25cbff2caa14c27d830ed7886a4d1522e1b6f9e5dc3b59ccf\
                   73ed49f"
                 burn_block_time: 1594233639
@@ -1939,6 +2802,10 @@ paths:
                 execution_cost_runtime: 2520952000
                 execution_cost_write_count: 608
                 execution_cost_write_length: 80170
+                microblock_tx_count:
+                  "0xce0b1a4099d3fc7d5885cc7a3baa952b6d999f9709d0683b98b843597208231c": 5
+                  "0x4c0529b6448a5885991c5021bd869cc97f1692c128a98b382729dc962203c326": 6
+                  "0x64968846291dfea1015228a9d4bbd60aac81378cd6774b810b08e59e6b0e7494": 9
         "404":
           description: Cannot find block with given ID
           content:
@@ -1951,9 +2818,9 @@ paths:
         in: path
         description: Height of the block
         required: true
-        example: 10000
         schema:
           type: number
+          example: 10000
     get:
       summary: Get block by height
       description: Retrieves block details of a specific block at a given block height
@@ -1986,7 +2853,7 @@ paths:
         required: true
         schema:
           type: string
-          example: 2.617713084789147e+53
+          example: "0x00000000000000000002bba732926cf68b6eda3e2cdbc2a85af79f10efeeeb10"
     get:
       summary: Get block by burnchain block hash
       description: Retrieves block details of a specific block for a given burnchain
@@ -2066,9 +2933,9 @@ paths:
           in: query
           description: index of the first items to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of burnchain reward recipients and amounts
@@ -2164,6 +3031,7 @@ paths:
           required: true
           schema:
             type: string
+            example: 36hQtSEXBMevo5chpxhfAGiCTSC34QKgda
         - name: limit
           in: query
           description: max number of items to fetch
@@ -2174,9 +3042,9 @@ paths:
           in: query
           description: index of the first items to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of burnchain reward recipients and amounts
@@ -2209,9 +3077,9 @@ paths:
           in: query
           description: index of first rewards to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of burnchain reward recipients and amounts
@@ -2316,6 +3184,7 @@ paths:
           required: true
           schema:
             type: string
+            example: 36hQtSEXBMevo5chpxhfAGiCTSC34QKgda
         - name: limit
           in: query
           description: max number of rewards to fetch
@@ -2326,9 +3195,9 @@ paths:
           in: query
           description: index of first rewards to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of burnchain reward recipients and amounts
@@ -2358,6 +3227,7 @@ paths:
           required: true
           schema:
             type: string
+            example: 36hQtSEXBMevo5chpxhfAGiCTSC34QKgda
       responses:
         "200":
           description: List of burnchain reward recipients and amounts
@@ -2398,552 +3268,118 @@ paths:
             application/json:
               schema:
                 type: object
-                title: SmartContractTransaction
-                description: Describes representation of a Type-1 Stacks 2.0 transaction.
-                  https://github.com/blockstack/stacks-blockchain/blob/master/sip/sip-005-blocks-and-transactions.md#type-1-instantiating-a-smart-contract
-                allOf:
-                  - title: AbstractTransaction
-                    description: Anchored transaction metadata. All mined/anchored Stacks
-                      transactions have these properties.
-                    type: object
-                    allOf:
-                      - title: BaseTransaction
-                        description: Transaction properties that are available from a raw serialized
-                          transactions. These are available for transactions in
-                          the mempool as well as mined transactions.
-                        type: object
-                        required:
-                          - tx_id
-                          - nonce
-                          - fee_rate
-                          - sender_address
-                          - sponsored
-                          - post_condition_mode
-                          - post_conditions
-                          - anchor_mode
-                        additionalProperties: false
-                        properties:
-                          tx_id:
-                            type: string
-                            description: Transaction ID
-                          nonce:
-                            type: integer
-                            description: Used for ordering the transactions originating from and paying from
-                              an account. The nonce ensures that a transaction
-                              is processed at most once. The nonce counts the
-                              number of times an account's owner(s) have
-                              authorized a transaction. The first transaction
-                              from an account will have a nonce value equal to
-                              0, the second will have a nonce value equal to 1,
-                              and so on.
-                          fee_rate:
-                            type: string
-                            description: Transaction fee as Integer string (64-bit unsigned integer).
-                          sender_address:
-                            type: string
-                            description: Address of the transaction initiator
-                          sponsor_nonce:
-                            type: integer
-                          sponsored:
-                            type: boolean
-                            description: Denotes whether the originating account is the same as the paying
-                              account
-                          sponsor_address:
-                            type: string
-                          post_condition_mode:
-                            title: PostConditionMode
-                            description: ""
-                            type: string
-                            enum:
-                              - allow
-                              - deny
-                          post_conditions:
-                            type: array
-                            items:
-                              title: PostCondition
-                              description: Post-conditionscan limit the damage done to a user's assets
-                              anyOf:
-                                - title: PostConditionStx
-                                  type: object
-                                  allOf:
-                                    - type: object
-                                      required:
-                                        - principal
-                                      additionalProperties: false
-                                      properties:
-                                        principal:
-                                          title: PostConditionPrincipal
-                                          type: object
-                                          anyOf:
-                                            - type: object
-                                              additionalProperties: false
-                                              description: Principal Origin
-                                              required:
-                                                - type_id
-                                              properties:
-                                                type_id:
-                                                  type: string
-                                                  description: String literal of type `PostConditionPrincipalType`
-                                                  enum:
-                                                    - principal_origin
-                                            - type: object
-                                              description: Principal Standard
-                                              required:
-                                                - type_id
-                                                - address
-                                              additionalProperties: false
-                                              properties:
-                                                type_id:
-                                                  type: string
-                                                  description: String literal of type `PostConditionPrincipalType`
-                                                  enum:
-                                                    - principal_standard
-                                                address:
-                                                  type: string
-                                            - type: object
-                                              description: Principal Contract
-                                              required:
-                                                - type_id
-                                                - address
-                                                - contract_name
-                                              additionalProperties: false
-                                              properties:
-                                                type_id:
-                                                  type: string
-                                                  description: String literal of type `PostConditionPrincipalType`
-                                                  enum:
-                                                    - principal_contract
-                                                address:
-                                                  type: string
-                                                contract_name:
-                                                  type: string
-                                    - type: object
-                                      required:
-                                        - condition_code
-                                        - amount
-                                        - type
-                                      additionalProperties: false
-                                      properties:
-                                        condition_code:
-                                          title: PostConditionFungibleConditionCode
-                                          description: A fungible condition code encodes a statement being made for either
-                                            STX or a fungible token, with
-                                            respect to the originating account.
-                                          type: string
-                                          enum:
-                                            - sent_equal_to
-                                            - sent_greater_than
-                                            - sent_greater_than_or_equal_to
-                                            - sent_less_than
-                                            - sent_less_than_or_equal_to
-                                        amount:
-                                          type: string
-                                        type:
-                                          enum:
-                                            - stx
-                                          type: string
-                                - title: PostConditionFungible
-                                  type: object
-                                  allOf:
-                                    - type: object
-                                      required:
-                                        - principal
-                                      additionalProperties: false
-                                      properties:
-                                        principal:
-                                          $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                                            ntent/application~1json/schema/allO\
-                                            f/0/allOf/0/properties/post_conditi\
-                                            ons/items/anyOf/0/allOf/0/propertie\
-                                            s/principal"
-                                    - type: object
-                                      required:
-                                        - condition_code
-                                        - amount
-                                        - type
-                                        - asset
-                                      additionalProperties: false
-                                      properties:
-                                        condition_code:
-                                          $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                                            ntent/application~1json/schema/allO\
-                                            f/0/allOf/0/properties/post_conditi\
-                                            ons/items/anyOf/0/allOf/1/propertie\
-                                            s/condition_code"
-                                        type:
-                                          enum:
-                                            - fungible
-                                          type: string
-                                        amount:
-                                          type: string
-                                        asset:
-                                          type: object
-                                          required:
-                                            - asset_name
-                                            - contract_address
-                                            - contract_name
-                                          additionalProperties: false
-                                          properties:
-                                            asset_name:
-                                              type: string
-                                            contract_address:
-                                              type: string
-                                            contract_name:
-                                              type: string
-                                - title: PostConditionNonFungible
-                                  type: object
-                                  allOf:
-                                    - type: object
-                                      required:
-                                        - principal
-                                      additionalProperties: false
-                                      properties:
-                                        principal:
-                                          $ref: "#/paths/~1extended~1v1~1contract~1%7Bcontract_id%7D/get/responses/200/co\
-                                            ntent/application~1json/schema/allO\
-                                            f/0/allOf/0/properties/post_conditi\
-                                            ons/items/anyOf/0/allOf/0/propertie\
-                                            s/principal"
-                                    - type: object
-                                      required:
-                                        - condition_code
-                                        - type
-                                        - asset_value
-                                        - asset
-                                      additionalProperties: false
-                                      properties:
-                                        condition_code:
-                                          title: PostConditionNonFungibleConditionCode
-                                          description: A non-fungible condition code encodes a statement being made about
-                                            a non-fungible token, with respect
-                                            to whether or not the particular
-                                            non-fungible token is owned by the
-                                            account.
-                                          type: string
-                                          enum:
-                                            - sent
-                                            - not_sent
-                                        type:
-                                          enum:
-                                            - non_fungible
-                                          type: string
-                                        asset_value:
-                                          type: object
-                                          additionalProperties: false
-                                          required:
-                                            - hex
-                                            - repr
-                                          properties:
-                                            hex:
-                                              type: string
-                                            repr:
-                                              type: string
-                                        asset:
-                                          type: object
-                                          required:
-                                            - asset_name
-                                            - contract_address
-                                            - contract_name
-                                          additionalProperties: false
-                                          properties:
-                                            asset_name:
-                                              type: string
-                                            contract_address:
-                                              type: string
-                                            contract_name:
-                                              type: string
-                          anchor_mode:
-                            title: TransactionAnchorModeType
-                            type: string
-                            enum:
-                              - on_chain_only
-                              - off_chain_only
-                              - any
-                            description: "`on_chain_only`: the transaction MUST be included in an anchored
-                              block, `off_chain_only`: the transaction MUST be
-                              included in a microblock, `any`: the leader can
-                              choose where to include the transaction."
-                      - required:
-                          - tx_index
-                          - block_hash
-                          - block_height
-                          - burn_block_time
-                          - burn_block_time_iso
-                          - parent_burn_block_time
-                          - parent_burn_block_time_iso
-                          - canonical
-                          - tx_status
-                          - tx_result
-                          - events
-                          - event_count
-                          - parent_block_hash
-                          - is_unanchored
-                          - microblock_hash
-                          - microblock_sequence
-                          - microblock_canonical
-                          - execution_cost_read_count
-                          - execution_cost_read_length
-                          - execution_cost_runtime
-                          - execution_cost_write_count
-                          - execution_cost_write_length
-                        additionalProperties: false
-                        properties:
-                          block_hash:
-                            type: string
-                            description: Hash of the blocked this transactions was associated with
-                          block_height:
-                            type: integer
-                            description: Height of the block this transactions was associated with
-                          burn_block_time:
-                            type: integer
-                            description: Unix timestamp (in seconds) indicating when this block was mined
-                          burn_block_time_iso:
-                            type: string
-                            description: An ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ) timestamp indicating when
-                              this block was mined.
-                          parent_burn_block_time:
-                            type: integer
-                            description: Unix timestamp (in seconds) indicating when this parent block was
-                              mined
-                          parent_burn_block_time_iso:
-                            type: string
-                            description: An ISO 8601 (YYYY-MM-DDTHH:mm:ss.sssZ) timestamp indicating when
-                              this parent block was mined.
-                          canonical:
-                            type: boolean
-                            description: Set to `true` if block corresponds to the canonical chain tip
-                          tx_index:
-                            type: integer
-                            description: Index of the transaction, indicating the order. Starts at `0` and
-                              increases with each transaction
-                          tx_status:
-                            title: TransactionStatus
-                            description: Status of the transaction
-                            type: string
-                            enum:
-                              - success
-                              - abort_by_response
-                              - abort_by_post_condition
-                          tx_result:
-                            type: object
-                            required:
-                              - hex
-                              - repr
-                            description: Result of the transaction. For contract calls, this will show the
-                              value returned by the call. For other transaction
-                              types, this will return a boolean indicating the
-                              success of the transaction.
-                            additionalProperties: false
-                            properties:
-                              hex:
-                                type: string
-                                description: Hex string representing the value fo the transaction result
-                              repr:
-                                type: string
-                                description: Readable string of the transaction result
-                          event_count:
-                            type: integer
-                            description: Number of transaction events
-                          parent_block_hash:
-                            type: string
-                            description: Hash of the previous block.
-                          is_unanchored:
-                            type: boolean
-                            description: True if the transaction is included in a microblock that has not
-                              been confirmed by an anchor block.
-                          microblock_hash:
-                            type: string
-                            description: The microblock hash that this transaction was streamed in. If the
-                              transaction was batched in an anchor block (not
-                              included within a microblock) then this value will
-                              be an empty string.
-                          microblock_sequence:
-                            type: integer
-                            description: The microblock sequence number that this transaction was streamed
-                              in. If the transaction was batched in an anchor
-                              block (not included within a microblock) then this
-                              value will be 2147483647 (0x7fffffff, the max
-                              int32 value), this value preserves logical
-                              transaction ordering on (block_height,
-                              microblock_sequence, tx_index).
-                          microblock_canonical:
-                            type: boolean
-                            description: Set to `true` if microblock is anchored in the canonical chain tip,
-                              `false` if the transaction was orphaned in a
-                              micro-fork.
-                          execution_cost_read_count:
-                            type: integer
-                            description: Execution cost read count.
-                          execution_cost_read_length:
-                            type: integer
-                            description: Execution cost read length.
-                          execution_cost_runtime:
-                            type: integer
-                            description: Execution cost runtime.
-                          execution_cost_write_count:
-                            type: integer
-                            description: Execution cost write count.
-                          execution_cost_write_length:
-                            type: integer
-                            description: Execution cost write length.
-                          events:
-                            type: array
-                            description: List of transaction events
-                            items:
-                              $ref: "#/paths/~1extended~1v1~1address~1%7Bprincipal%7D~1assets/get/responses/2\
-                                00/content/application~1json/schema/properties/\
-                                results/items"
-                  - type: object
-                    title: SmartContractTransactionMetadata
-                    description: Metadata associated with a contract-deploy type transaction.
-                      https://github.com/blockstack/stacks-blockchain/blob/master/sip/sip-005-blocks-and-transactions.md#type-1-instantiating-a-smart-contract
-                    required:
-                      - tx_type
-                      - smart_contract
-                    additionalProperties: false
-                    properties:
-                      tx_type:
-                        type: string
-                        enum:
-                          - smart_contract
-                      smart_contract:
-                        type: object
-                        additionalProperties: false
-                        required:
-                          - contract_id
-                          - source_code
-                        properties:
-                          contract_id:
-                            type: string
-                            description: Contract identifier formatted as
-                              `<principaladdress>.<contract_name>`
-                          source_code:
-                            type: string
-                            description: Clarity code of the smart contract being deployed
+                title: SmartContract
+                description: A Smart Contract Detail
+                required:
+                  - tx_id
+                  - canonical
+                  - block_height
+                  - source_code
+                  - contract_id
+                  - abi
+                properties:
+                  tx_id:
+                    type: string
+                  canonical:
+                    type: boolean
+                  contract_id:
+                    type: string
+                  block_height:
+                    type: integer
+                  source_code:
+                    type: string
+                  abi:
+                    type: string
+                additionalProperties: false
               example:
-                tx_id: "0x8122b7ae041120ddc9e2f8108e165912e40ad146399d42d6e6cbca7fd2c8ac28"
-                tx_status: success
-                tx_type: smart_contract
-                fee_rate: "3000"
-                sender_address: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1
-                sponsored: false
-                post_condition_mode: allow
-                is_unanchored: false
-                microblock_hash: ""
-                microblock_sequence: 2147483647
-                microblock_canonical: true
-                block_hash: "0x105685d3d4f251d73b75865b192cefb111dd49f67b8970a95094dc7ecf826caa"
-                block_height: 3196
-                burn_block_time: 1594228322
+                tx_id: "0xb8b822f30a063fda8f9d44a23530a562a1ed93867d5977fbb12b1c284736edbb"
                 canonical: true
-                tx_index: 1
-                post_conditions: []
-                smart_contract:
-                  contract_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world
-                  source_code: >-
-                    (define-constant sender
-                    'SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR)
-
-                    (define-constant recipient 'SM2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQVX8X0G)
-
-
-                    (define-fungible-token novel-token-19)
-
-                    (begin (ft-mint? novel-token-19 u12 sender))
-
-                    (begin (ft-transfer? novel-token-19 u2 sender recipient))
-
-
-                    (define-non-fungible-token hello-nft uint)
-
-                    (begin (nft-mint? hello-nft u1 sender))
-
-                    (begin (nft-mint? hello-nft u2 sender))
-
-                    (begin (nft-transfer? hello-nft u1 sender recipient))
-
-
-                    (define-public (test-emit-event)
-                        (begin
-                            (print "Event! Hello world")
-                            (ok u1)))
-                    (begin (test-emit-event))
-
-
-                    (define-public (test-event-types)
-                        (begin
-                            (unwrap-panic (ft-mint? novel-token-19 u3 recipient))
-                            (unwrap-panic (nft-mint? hello-nft u2 recipient))
-                            (unwrap-panic (stx-transfer? u60 tx-sender 'SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR))
-                            (unwrap-panic (stx-burn? u20 tx-sender))
-                            (ok u1)))
-
-                    (define-map store ((key (buff 32))) ((value (buff 32))))
-
-                    (define-public (get-value (key (buff 32)))
-                        (begin
-                            (match (map-get? store ((key key)))
-                                entry (ok (get value entry))
-                                (err 0))))
-                    (define-public (set-value (key (buff 32)) (value (buff 32)))
-                        (begin
-                            (map-set store ((key key)) ((value value)))
-                            (ok u1)))
-                events:
-                  - event_index: 0
-                    event_type: fungible_token_asset
-                    asset:
-                      asset_event_type: mint
-                      asset_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world::novel-token-19
-                      sender: ""
-                      recipient: SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR
-                      amount: "12"
-                  - event_index: 1
-                    event_type: non_fungible_token_asset
-                    asset:
-                      asset_event_type: mint
-                      asset_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world::hello-nft
-                      sender: ""
-                      recipient: SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR
-                      value:
-                        hex: "0x0100000000000000000000000000000001"
-                        repr: "1"
-                  - event_index: 2
-                    event_type: non_fungible_token_asset
-                    asset:
-                      asset_event_type: mint
-                      asset_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world::hello-nft
-                      sender: ""
-                      recipient: SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR
-                      value:
-                        hex: "0x0100000000000000000000000000000002"
-                        repr: "2"
-                  - event_index: 3
-                    event_type: smart_contract_log
-                    contract_log:
-                      contract_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world
-                      topic: print
-                      value:
-                        hex: "0x02000000124576656e74212048656c6c6f20776f726c64"
-                        repr: '"Event! Hello world"'
-                  - event_index: 4
-                    event_type: fungible_token_asset
-                    asset:
-                      asset_event_type: transfer
-                      asset_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world::novel-token-19
-                      sender: SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR
-                      recipient: SM2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQVX8X0G
-                      amount: "2"
-                  - event_index: 5
-                    event_type: non_fungible_token_asset
-                    asset:
-                      asset_event_type: transfer
-                      asset_id: STJTXEJPJPPVDNA9B052NSRRBGQCFNKVS178VGH1.hello_world::hello-nft
-                      sender: SZ2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQ9H6DPR
-                      recipient: SM2J6ZY48GV1EZ5V2V5RB9MP66SW86PYKKQVX8X0G
-                      value:
-                        hex: "0x0100000000000000000000000000000001"
-                        repr: "1"
+                contract_id: SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.btc-ft-swap
+                block_height: 23131
+                source_code: "(use-trait fungible-token
+                  'SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE.sip-010-trait-ft-s\
+                  tandard.sip-010-trait) (define-constant expiry u100)
+                  (define-map swaps uint {sats: uint, btc-receiver: (buff 40),
+                  amount: uint, ft-receiver: (optional principal), ft-sender:
+                  principal, when: uint, done: uint, ft: principal})
+                  (define-data-var next-id uint u0) (define-private (find-out
+                  (entry {scriptPubKey: (buff 128), value: (buff 8)}) (result
+                  {pubscriptkey: (buff 40), out: (optional {scriptPubKey: (buff
+                  128), value: uint})})) (if (is-eq (get scriptPubKey entry)
+                  (get pubscriptkey result)) (merge result {out: (some
+                  {scriptPubKey: (get scriptPubKey entry), value: (get uint32
+                  (unwrap-panic (contract-call?
+                  'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.clarity-bitcoin-li\
+                  b-v1 read-uint32 {txbuff: (get value entry), index: u0})))})})
+                  result)) (define-public (get-out-value (tx { version: (buff
+                  4), ins: (list 8 {outpoint: {hash: (buff 32), index: (buff
+                  4)}, scriptSig: (buff 256), sequence: (buff 4)}), outs: (list
+                  8 {value: (buff 8), scriptPubKey: (buff 128)}), locktime:
+                  (buff 4)}) (pubscriptkey (buff 40))) (ok (fold find-out (get
+                  outs tx) {pubscriptkey: pubscriptkey, out: none}))) ;; create
+                  a swap between btc and fungible token (define-public
+                  (create-swap (sats uint) (btc-receiver (buff 40)) (amount
+                  uint) (ft-receiver (optional principal)) (ft
+                  <fungible-token>)) (let ((id (var-get next-id))) (asserts!
+                  (map-insert swaps id {sats: sats, btc-receiver: btc-receiver,
+                  amount: amount, ft-receiver: ft-receiver, ft-sender:
+                  tx-sender, when: block-height, done: u0, ft: (contract-of
+                  ft)}) ERR_INVALID_ID) (var-set next-id (+ id u1)) (match
+                  (contract-call? ft transfer amount tx-sender (as-contract
+                  tx-sender) (some 0x636174616d6172616e2073776170)) success (ok
+                  id) error (err (* error u1000))))) (define-public
+                  (set-ft-receiver (id uint)) (let ((swap (unwrap! (map-get?
+                  swaps id) ERR_INVALID_ID))) (if (is-none (get ft-receiver
+                  swap)) (begin (asserts! (map-set swaps id (merge swap
+                  {ft-receiver: (some tx-sender)})) ERR_NATIVE_FAILURE) (ok
+                  true)) ERR_ALREADY_DONE))) ;; any user can cancle the swap
+                  after the expiry period (define-public (cancel (id uint) (ft
+                  <fungible-token>)) (let ((swap (unwrap! (map-get? swaps id)
+                  ERR_INVALID_ID))) (asserts! (is-eq (contract-of ft) (get ft
+                  swap)) ERR_INVALID_FUNGIBLE_TOKEN) (asserts! (< (+ (get when
+                  swap) expiry) block-height) ERR_TOO_EARLY) (asserts! (is-eq
+                  (get done swap) u0) ERR_ALREADY_DONE) (asserts! (map-set swaps
+                  id (merge swap {done: u1})) ERR_NATIVE_FAILURE) (as-contract
+                  (contract-call? ft transfer (get amount swap) tx-sender (get
+                  ft-sender swap) (some
+                  0x72657665727420636174616d6172616e2073776170))))) ;; any user
+                  can submit a tx that contains the swap (define-public
+                  (submit-swap (id uint) (block { version: (buff 4), parent:
+                  (buff 32), merkle-root: (buff 32), timestamp: (buff 4), nbits:
+                  (buff 4), nonce: (buff 4), height: uint }) (tx {version: (buff
+                  4), ins: (list 8 {outpoint: {hash: (buff 32), index: (buff
+                  4)}, scriptSig: (buff 256), sequence: (buff 4)}), outs: (list
+                  8 {value: (buff 8), scriptPubKey: (buff 128)}), locktime:
+                  (buff 4)}) (proof { tx-index: uint, hashes: (list 12 (buff
+                  32)), tree-depth: uint }) (ft <fungible-token>)) (let ((swap
+                  (unwrap! (map-get? swaps id) ERR_INVALID_ID)) (tx-buff
+                  (contract-call?
+                  'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.clarity-bitcoin-li\
+                  b-v1 concat-tx tx))) (match (contract-call?
+                  'SP2PABAF9FTAJYNFZH93XENAJ8FVY99RRM50D2JG9.clarity-bitcoin-li\
+                  b-v1 was-tx-mined block tx-buff proof) result (begin (asserts!
+                  result ERR_VERIFICATION_FAILED) (asserts! (is-eq (get done
+                  swap) u0) ERR_ALREADY_DONE) (match (get out (unwrap!
+                  (get-out-value tx (get btc-receiver swap))
+                  ERR_NATIVE_FAILURE)) out (if (>= (get value out) (get sats
+                  swap)) (begin (asserts! (is-eq (contract-of ft) (get ft swap))
+                  ERR_INVALID_FUNGIBLE_TOKEN) (asserts! (map-set swaps id (merge
+                  swap {done: u1})) ERR_NATIVE_FAILURE) (as-contract
+                  (contract-call? ft transfer (get amount swap) tx-sender
+                  (unwrap! (get ft-receiver swap) ERR_NO_FT_RECEIVER) (some
+                  0x636174616d6172616e2073776170)))) ERR_TX_VALUE_TOO_SMALL)
+                  ERR_TX_NOT_FOR_RECEIVER)) error (err (* error u1000)))))
+                  (define-constant ERR_VERIFICATION_FAILED (err u1))
+                  (define-constant ERR_FAILED_TO_PARSE_TX (err u2))
+                  (define-constant ERR_INVALID_ID (err u3)) (define-constant
+                  ERR_TOO_EARLY (err u4)) (define-constant
+                  ERR_TX_VALUE_TOO_SMALL (err u5)) (define-constant
+                  ERR_TX_NOT_FOR_RECEIVER (err u6)) (define-constant
+                  ERR_ALREADY_DONE (err u7)) (define-constant
+                  ERR_INVALID_FUNGIBLE_TOKEN (err u8)) (define-constant
+                  ERR_NO_FT_RECEIVER (err u9)) (define-constant
+                  ERR_NATIVE_FAILURE (err u99)) "
+                abi: '{"maps":[{"key":"uint128","name":"swaps","value":{"tuple":[{"name":"amount","type":"uint128"},{"name":"btc-receiver","type":{"buffer":{"length":40}}},{"name":"done","type":"uint128"},{"name":"ft","type":"principal"},{"name":"ft-receiver","type":{"optional":"principal"}},{"name":"ft-sender","type":"principal"},{"name":"sats","type":"uint128"},{"name":"when","type":"uint128"}]}}],"functions":[{"args":[{"name":"entry","type":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":{"buffer":{"length":8}}}]}},{"name":"result","type":{"tuple":[{"name":"out","type":{"optional":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":"uint128"}]}}},{"name":"pubscriptkey","type":{"buffer":{"length":40}}}]}}],"name":"find-out","access":"private","outputs":{"type":{"tuple":[{"name":"out","type":{"optional":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":"uint128"}]}}},{"name":"pubscriptkey","type":{"buffer":{"length":40}}}]}}},{"args":[{"name":"id","type":"uint128"},{"name":"ft","type":"trait_reference"}],"name":"cancel","access":"public","outputs":{"type":{"response":{"ok":"bool","error":"uint128"}}}},{"args":[{"name":"sats","type":"uint128"},{"name":"btc-receiver","type":{"buffer":{"length":40}}},{"name":"amount","type":"uint128"},{"name":"ft-receiver","type":{"optional":"principal"}},{"name":"ft","type":"trait_reference"}],"name":"create-swap","access":"public","outputs":{"type":{"response":{"ok":"uint128","error":"uint128"}}}},{"args":[{"name":"tx","type":{"tuple":[{"name":"ins","type":{"list":{"type":{"tuple":[{"name":"outpoint","type":{"tuple":[{"name":"hash","type":{"buffer":{"length":32}}},{"name":"index","type":{"buffer":{"length":4}}}]}},{"name":"scriptSig","type":{"buffer":{"length":256}}},{"name":"sequence","type":{"buffer":{"length":4}}}]},"length":8}}},{"name":"locktime","type":{"buffer":{"length":4}}},{"name":"outs","type":{"list":{"type":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":{"buffer":{"length":8}}}]},"length":8}}},{"name":"version","type":{"buffer":{"length":4}}}]}},{"name":"pubscriptkey","type":{"buffer":{"length":40}}}],"name":"get-out-value","access":"public","outputs":{"type":{"response":{"ok":{"tuple":[{"name":"out","type":{"optional":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":"uint128"}]}}},{"name":"pubscriptkey","type":{"buffer":{"length":40}}}]},"error":"none"}}}},{"args":[{"name":"id","type":"uint128"}],"name":"set-ft-receiver","access":"public","outputs":{"type":{"response":{"ok":"bool","error":"uint128"}}}},{"args":[{"name":"id","type":"uint128"},{"name":"block","type":{"tuple":[{"name":"height","type":"uint128"},{"name":"merkle-root","type":{"buffer":{"length":32}}},{"name":"nbits","type":{"buffer":{"length":4}}},{"name":"nonce","type":{"buffer":{"length":4}}},{"name":"parent","type":{"buffer":{"length":32}}},{"name":"timestamp","type":{"buffer":{"length":4}}},{"name":"version","type":{"buffer":{"length":4}}}]}},{"name":"tx","type":{"tuple":[{"name":"ins","type":{"list":{"type":{"tuple":[{"name":"outpoint","type":{"tuple":[{"name":"hash","type":{"buffer":{"length":32}}},{"name":"index","type":{"buffer":{"length":4}}}]}},{"name":"scriptSig","type":{"buffer":{"length":256}}},{"name":"sequence","type":{"buffer":{"length":4}}}]},"length":8}}},{"name":"locktime","type":{"buffer":{"length":4}}},{"name":"outs","type":{"list":{"type":{"tuple":[{"name":"scriptPubKey","type":{"buffer":{"length":128}}},{"name":"value","type":{"buffer":{"length":8}}}]},"length":8}}},{"name":"version","type":{"buffer":{"length":4}}}]}},{"name":"proof","type":{"tuple":[{"name":"hashes","type":{"list":{"type":{"buffer":{"length":32}},"length":12}}},{"name":"tree-depth","type":"uint128"},{"name":"tx-index","type":"uint128"}]}},{"name":"ft","type":"trait_reference"}],"name":"submit-swap","access":"public","outputs":{"type":{"response":{"ok":"bool","error":"uint128"}}}}],"variables":[{"name":"ERR_ALREADY_DONE","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_FAILED_TO_PARSE_TX","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_INVALID_FUNGIBLE_TOKEN","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_INVALID_ID","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_NATIVE_FAILURE","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_NO_FT_RECEIVER","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_TOO_EARLY","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_TX_NOT_FOR_RECEIVER","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_TX_VALUE_TOO_SMALL","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"ERR_VERIFICATION_FAILED","type":{"response":{"ok":"none","error":"uint128"}},"access":"constant"},{"name":"expiry","type":"uint128","access":"constant"},{"name":"next-id","type":"uint128","access":"variable"}],"fungible_tokens":[],"non_fungible_tokens":[]}'
         "404":
           description: Cannot find contract of given ID
     parameters:
@@ -2953,6 +3389,7 @@ paths:
         required: true
         schema:
           type: string
+          example: SP6P4EJF0VG8V0RB3TQQKJBHDQKEF6NVRD1KZE3C.satoshibles
       - name: unanchored
         in: query
         description: Include transaction data from unanchored (i.e. unconfirmed) microblocks
@@ -3002,12 +3439,15 @@ paths:
                         - canonical
                         - block_height
                         - source_code
+                        - contract_id
                         - abi
                       properties:
                         tx_id:
                           type: string
                         canonical:
                           type: boolean
+                        contract_id:
+                          type: string
                         block_height:
                           type: integer
                         source_code:
@@ -3147,6 +3587,7 @@ paths:
           required: true
           schema:
             type: string
+            example: SP6P4EJF0VG8V0RB3TQQKJBHDQKEF6NVRD1KZE3C.satoshibles
         - name: limit
           in: query
           description: max number of contract events to fetch
@@ -3157,9 +3598,9 @@ paths:
           in: query
           description: index of first contract event to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -3301,6 +3742,8 @@ paths:
                               amount:
                                 type: string
                               value:
+                                type: string
+                              memo:
                                 type: string
                   - type: object
                     title: TransactionEventFungibleAsset
@@ -3528,6 +3971,7 @@ paths:
         in: path
         required: true
         description: Stacks address
+        example: SP6P4EJF0VG8V0RB3TQQKJBHDQKEF6NVRD1KZE3C
         schema:
           type: string
       - name: contract_name
@@ -3536,6 +3980,7 @@ paths:
         description: Contract name
         schema:
           type: string
+          example: satoshibles
       - name: tip
         in: query
         schema:
@@ -3590,18 +4035,21 @@ paths:
           description: Stacks address
           schema:
             type: string
+            example: SPSCWDV3RKV5ZRN1FQD84YE1NQFEDJ9R1F4DYQ11
         - name: contract_name
           in: path
           required: true
           description: Contract name
           schema:
             type: string
+            example: newyorkcitycoin-core-v2
         - name: map_name
           in: path
           required: true
           description: Map name
           schema:
             type: string
+            example: approved-contracts
         - name: proof
           in: query
           description: Returns object without the proof field when set to 0
@@ -3621,6 +4069,7 @@ paths:
           application/json:
             schema:
               type: string
+            example: "0x0100000000000000000000000000000095"
   "/v2/contracts/source/{contract_address}/{contract_name}":
     get:
       summary: Get contract source
@@ -3709,12 +4158,14 @@ paths:
         description: Stacks address
         schema:
           type: string
+          example: SP6P4EJF0VG8V0RB3TQQKJBHDQKEF6NVRD1KZE3C
       - name: contract_name
         in: path
         required: true
         description: Contract name
         schema:
           type: string
+          example: satoshibles
       - name: proof
         in: query
         description: Returns object without the proof field if set to 0
@@ -3772,18 +4223,21 @@ paths:
           description: Stacks address
           schema:
             type: string
+            example: SP187Y7NRSG3T9Z9WTSWNEN3XRV1YSJWS81C7JKV7
         - name: contract_name
           in: path
           required: true
           description: Contract name
           schema:
             type: string
+            example: imaginary-friends-zebras
         - name: function_name
           in: path
           required: true
           description: Function name
           schema:
             type: string
+            example: get-token-uri
         - name: tip
           in: query
           schema:
@@ -3815,6 +4269,10 @@ paths:
                   description: An array of hex serialized Clarity values
                   items:
                     type: string
+            example:
+              sender: STM9EQRAB3QAKF8NKTP15WJT7VHH4EWG3DJB4W29
+              arguments:
+                - "0x0100000000000000000000000000000095"
   "/extended/v1/address/{principal}/balances":
     get:
       summary: Get account balances
@@ -3829,9 +4287,9 @@ paths:
           in: path
           description: Stacks address or a Contract identifier
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -3846,9 +4304,9 @@ paths:
           description: returned data representing the state up until that point in time,
             rather than the current block.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4001,15 +4459,14 @@ paths:
         - name: principal
           in: path
           description: Stacks address or a Contract identifier.
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           required: true
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
             microblocks.
-          example: true
           required: false
           schema:
             type: boolean
@@ -4021,9 +4478,9 @@ paths:
             rather than the current block. Note - Use either of the query
             parameters but not both at a time.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4069,10 +4526,10 @@ paths:
         - name: principal
           in: path
           description: Stacks address or a Contract identifier
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           required: true
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: limit
           in: query
           description: max number of account transactions to fetch
@@ -4084,9 +4541,9 @@ paths:
           in: query
           description: index of first account transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: height
           in: query
           description: Filter for transactions only at this given block height
@@ -4109,9 +4566,9 @@ paths:
             rather than the current block. Note - Use either of the query
             parameters but not both at a time.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4171,7 +4628,7 @@ paths:
   "/extended/v1/address/{principal}/{tx_id}/with_transfers":
     get:
       summary: Get account transaction information for specific transaction
-      description: Retrieves transaction details for a given Transcation Id `tx_id`,
+      description: Retrieves transaction details for a given Transaction Id `tx_id`,
         for a given account or contract Identifier.
       tags:
         - Accounts
@@ -4180,16 +4637,17 @@ paths:
         - name: principal
           in: path
           description: Stacks address or a contract identifier
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           required: true
           schema:
             type: string
+            example: SP3FBR2AGK5H9QBDH3EEN6DF8EK8JY7RX8QJ5SVTE
         - name: tx_id
           in: path
           description: Transaction id
           required: true
           schema:
             type: string
+            example: "0x34d79c7cfc2fe525438736733e501a4bf0308a5556e3e080d1e2c0858aad7448"
       responses:
         "200":
           description: Success
@@ -4356,29 +4814,31 @@ paths:
         - name: principal
           in: path
           description: Stacks address or a Contract identifier
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           required: true
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: limit
           in: query
           description: max number of account transactions to fetch
           required: false
           schema:
             type: integer
+            example: 20
         - name: offset
           in: query
           description: index of first account transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 10
         - name: height
           in: query
           description: Filter for transactions only at this given block height
           required: false
           schema:
             type: number
+            example: 66119
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -4393,9 +4853,9 @@ paths:
           description: returned data representing the state up until that point in time,
             rather than the current block.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4640,15 +5100,16 @@ paths:
           in: path
           description: Stacks address
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: block_height
           in: query
           description: Optionally get the nonce at a given block height.
           required: false
           schema:
             type: number
+            example: 66119
         - name: block_hash
           in: query
           description: Optionally get the nonce at a given block hash. Note - Use either
@@ -4656,6 +5117,7 @@ paths:
           required: false
           schema:
             type: string
+            example: "0x72d53f3cba39e149dcd42708e535bdae03d73e60d2fe853aaf61c0b392f521e9"
       responses:
         "200":
           description: Success
@@ -4719,22 +5181,23 @@ paths:
           in: path
           description: Stacks address or a Contract identifier
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: limit
           in: query
           description: max number of account assets to fetch
           required: false
           schema:
             type: integer
+            example: 20
         - name: offset
           in: query
           description: index of first account assets to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -4750,9 +5213,9 @@ paths:
             than the current block. Note - Use either of the query parameters
             but not both at a time.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4821,9 +5284,9 @@ paths:
           in: path
           description: Stacks address or a Contract identifier
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: limit
           in: query
           description: number of items to return
@@ -4834,9 +5297,9 @@ paths:
           in: query
           description: number of items to skip
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: height
           in: query
           description: Filter for transfers only at this given block height
@@ -4858,9 +5321,9 @@ paths:
             rather than the current block. Note - Use either of the query
             parameters but not both at a time.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -4921,6 +5384,7 @@ paths:
                           enum:
                             - bulk-send
                             - stx-transfer
+                            - stx-transfer-memo
                           description: Indicates if the transfer is from a stx-transfer transaction or a
                             contract-call transaction
                         tx_index:
@@ -4956,9 +5420,9 @@ paths:
           in: path
           description: Stacks address or a Contract identifier
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: limit
           in: query
           description: number of items to return
@@ -4969,9 +5433,9 @@ paths:
           in: query
           description: number of items to skip
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -4987,9 +5451,9 @@ paths:
             rather than the current block. Note - Use either of the query
             parameters but not both at a time.
           required: false
-          example: 60000
           schema:
             type: string
+            example: 60000
       responses:
         "200":
           description: Success
@@ -5018,18 +5482,21 @@ paths:
                       title: NftEvent
                       additionalProperties: false
                       required:
-                        - sender
-                        - recipient
                         - asset_identifier
                         - value
                         - tx_id
+                        - tx_index
+                        - event_index
                         - block_height
+                        - asset_event_type
                       properties:
                         sender:
                           type: string
                         recipient:
                           type: string
                         asset_identifier:
+                          type: string
+                        asset_event_type:
                           type: string
                         value:
                           type: object
@@ -5047,7 +5514,11 @@ paths:
                               description: Readable string of the NFT identifier
                         tx_id:
                           type: string
+                        tx_index:
+                          type: number
                         block_height:
+                          type: number
+                        event_index:
                           type: number
               example:
                 limit: 20
@@ -5079,9 +5550,9 @@ paths:
           in: path
           description: Stacks address or a Contract identifier
           required: true
-          example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
           schema:
             type: string
+            example: SP31DA6FTSJX2WGTZ69SFY11BH51NZMB0ZW97B5P0
         - name: proof
           in: query
           description: Returns object without the proof field if set to 0
@@ -5278,6 +5749,9 @@ paths:
                   status:
                     type: string
                     description: the current server status
+                  pox_v1_unlock_height:
+                    type: integer
+                    nullable: true
                   chain_tip:
                     title: ChainTip
                     description: Current chain tip information
@@ -5287,6 +5761,7 @@ paths:
                       - block_height
                       - block_hash
                       - index_block_hash
+                      - burn_block_height
                     properties:
                       block_height:
                         type: integer
@@ -5303,6 +5778,9 @@ paths:
                       microblock_sequence:
                         type: integer
                         description: the current microblock sequence number
+                      burn_block_height:
+                        type: integer
+                        description: the current burn chain block height
               example:
                 server_version: stacks-blockchain-api v1.0.7 (master:77b25878)
                 status: ready
@@ -5390,9 +5868,12 @@ paths:
         - Info
       operationId: get_stx_supply
       summary: Get total and unlocked STX supply
-      description: Retrieves the total and unlocked STX supply. More information on
+      description: >
+        Retrieves the total and unlocked STX supply. More information on
         Stacking can be found [here]
         (https://docs.stacks.co/understand-stacks/stacking).
+
+        **Note:** This uses the estimated future total supply for the year 2050.
       parameters:
         - in: query
           name: height
@@ -5402,7 +5883,8 @@ paths:
             example: 200
           description: Supply details are queried from specified block height. If the
             block height is not specified, the latest block height is taken as
-            default value.
+            default value. Note that the `block height` is referred to the
+            stacks blockchain.
       responses:
         "200":
           description: Success
@@ -5444,7 +5926,9 @@ paths:
         - Info
       operationId: get_stx_supply_total_supply_plain
       summary: Get total STX supply in plain text format
-      description: Retrieves the total supply for STX tokens as plain text.
+      description: |
+        Retrieves the total supply for STX tokens as plain text.
+        **Note:** this uses the estimated future total supply for the year 2050.
       responses:
         "200":
           description: success
@@ -5480,8 +5964,11 @@ paths:
       operationId: get_total_stx_supply_legacy_format
       summary: Get total and unlocked STX supply (results formatted the same as the
         legacy 1.0 API)
-      description: Retrieves total supply of STX tokens including those currently in
+      description: >
+        Retrieves total supply of STX tokens including those currently in
         circulation that have been unlocked.
+
+        **Note:** this uses the estimated future total supply for the year 2050.
       parameters:
         - in: query
           name: height
@@ -5585,15 +6072,35 @@ paths:
                   total_liquid_supply_ustx:
                     type: integer
               example:
-                contract_id: ST000000000000000000002AMW42H.pox
-                first_burnchain_block_height: 0
-                min_amount_ustx: 150000000000
-                registration_window_length: 250
+                contract_id: SP000000000000000000002Q6VF78.pox
+                pox_activation_threshold_ustx: 67694186237302
+                first_burnchain_block_height: 666050
+                prepare_phase_block_length: 100
+                reward_phase_block_length: 2000
+                reward_slots: 4000
                 rejection_fraction: 25
-                reward_cycle_id: 0
-                reward_cycle_length: 1000
-                rejection_votes_left_required: 1000
-                total_liquid_supply_ustx: 1000000000
+                total_liquid_supply_ustx: 1353883724746042
+                current_cycle:
+                  id: 50
+                  min_threshold_ustx: 100000000000
+                  stacked_ustx: 391056240478955
+                  is_pox_active: true
+                next_cycle:
+                  id: 51
+                  min_threshold_ustx: 90000000000
+                  min_increment_ustx: 67694186237
+                  stacked_ustx: 350473977597161
+                  prepare_phase_start_block_height: 773050
+                  blocks_until_prepare_phase: 227
+                  reward_phase_start_block_height: 773150
+                  blocks_until_reward_phase: 327
+                  ustx_until_pox_rejection: 338470931186500
+                min_amount_ustx: 90000000000
+                prepare_cycle_length: 100
+                reward_cycle_id: 50
+                reward_cycle_length: 2100
+                rejection_votes_left_required: 338470931186500
+                next_reward_cycle_in: 327
   "/extended/v1/search/{id}":
     get:
       summary: Search
@@ -5606,6 +6113,7 @@ paths:
           required: true
           schema:
             type: string
+            example: "0xcf8b233f19f6c07d2dc1963302d2436efd36e9afac127bf6582824a13961c06d"
           description: The hex hash string for a block or transaction, account address, or
             contract address
         - in: query
@@ -6212,6 +6720,11 @@ paths:
                     ion~1json/schema/properties/network_identifiers/items"
                 metadata:
                   type: object
+            example:
+              - network_identifier:
+                  blockchain: stacks
+                  network: mainnet
+                metadata: {}
   /rosetta/v1/network/status:
     post:
       tags:
@@ -6383,6 +6896,9 @@ paths:
                     ion~1json/schema/properties/network_identifiers/items"
                 metadata:
                   type: object
+            example:
+              $ref: "#/paths/~1rosetta~1v1~1network~1options/post/requestBody/content/applica\
+                tion~1json/example"
   /rosetta/v1/account/balance:
     post:
       tags:
@@ -6593,6 +7109,13 @@ paths:
                         ation~1json/schema/properties/current_block_identifier/\
                         allOf/1"
                     - type: object
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              account_identifier:
+                address: SP2W6477BT5CRWVC5D5RFNPNAR8R2NW63SMMCAWMC
+                metadata: {}
   /rosetta/v1/block:
     post:
       tags:
@@ -6733,6 +7256,13 @@ paths:
                 block_identifier:
                   $ref: "#/paths/~1rosetta~1v1~1account~1balance/post/requestBody/content/applica\
                     tion~1json/schema/properties/block_identifier"
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              block_identifier:
+                index: 71107
+                hash: "0xce7e16561150f3a379845f4e96c3dd8f8396e397495821c9eec6b429391c529c"
   /rosetta/v1/block/transaction:
     post:
       tags:
@@ -6832,13 +7362,21 @@ paths:
                       description: "Any transactions that are attributable only to a block (ex: a
                         block event) should use the hash of the block as the
                         identifier."
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              block_identifier:
+                hash: "0xce7e16561150f3a379845f4e96c3dd8f8396e397495821c9eec6b429391c529c"
+              transaction_identifier:
+                hash: "0x49354cc7b18dc5296c945a8e89f7d758dac14f1ab38d4c33dfe45ec1765ab339"
   /rosetta/v1/mempool:
     post:
       tags:
         - Rosetta
       summary: Get All Mempool Transactions
       operationId: rosetta_mempool
-      description: Retrieves a list of transcations currently in the mempool for a
+      description: Retrieves a list of transactions currently in the mempool for a
         given network.
       responses:
         "200":
@@ -6886,6 +7424,9 @@ paths:
                     ion~1json/schema/properties/network_identifiers/items"
                 metadata:
                   type: object
+            example:
+              $ref: "#/paths/~1rosetta~1v1~1network~1options/post/requestBody/content/applica\
+                tion~1json/example"
   /rosetta/v1/mempool/transaction:
     post:
       tags:
@@ -7039,6 +7580,14 @@ paths:
                         - edwards25519
                 metadata:
                   type: object
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              public_key:
+                hex_bytes: 025c13b2fc2261956d8a4ad07d481b1a3b2cbf93a24f992249a61c3a1c4de79c51
+                curve_type: secp256k1
+              metadata: {}
   /rosetta/v1/construction/hash:
     post:
       tags:
@@ -7093,6 +7642,16 @@ paths:
                 signed_transaction:
                   type: string
                   description: Signed transaction
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              signed_transaction: "0x80800000000400539886f96611ba3ba6cef9618f8c78118b37c5be00\
+                0000000000000000000000000000b400017a33a91515ef48608a99c6adecd2e\
+                b258e11534a1acf66348f5678c8e2c8f83d243555ed67a0019d3500df98563c\
+                a31321c1a675b43ef79f146e322fe08df75103020000000000051a1ae3f911d\
+                8f1d46d7416bfbe4b593fd41eac19cb000000000007a1200000000000000000\
+                0000000000000000000000000000000000000000000000000000"
   /rosetta/v1/construction/metadata:
     post:
       tags:
@@ -7236,6 +7795,34 @@ paths:
                   items:
                     $ref: "#/paths/~1rosetta~1v1~1construction~1derive/post/requestBody/content/app\
                       lication~1json/schema/properties/public_key"
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              options:
+                sender_address: SP3Y0BBCCCBFAMYCYN3F35CX9MH1J2GATP53JX3FA
+                type: stack_stx
+                status: success
+                token_transfer_recipient_address: string
+                amount: "500000"
+                symbol: STX
+                decimals: 6
+                gas_limit: 0
+                gas_price: 0
+                suggested_fee_multiplier: 0
+                max_fee: "12380898"
+                fee: fee
+                size: 260
+                memo: test.memo
+                number_of_cycles: 0
+                contract_address: SP112T7BYCNEDCZ9TCYXCXFNJG9WXX5Q5SG6DSBAM
+                contract_name: STX transfer
+                burn_block_height: 0
+                delegate_to: cb3df38053d132895220b9ce471f6b676db5b9bf0b4adefb55f2118ece2478df01.STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6
+                pox_addr: 1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3
+              public_keys:
+                - hex_bytes: publicKey
+                  curve_type: secp256k1
   /rosetta/v1/construction/parse:
     post:
       tags:
@@ -7476,21 +8063,6 @@ paths:
                     items:
                       $ref: "#/paths/~1rosetta~1v1~1account~1balance/post/requestBody/content/applica\
                         tion~1json/schema/properties/account_identifier"
-              example:
-                options:
-                  sender_address: STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6
-                  type: stack_stx
-                  number_of_cycles: 5
-                  amount: "5000"
-                  symbol: STX
-                  decimals: 6
-                  pox_addr: 1Xik14zRm29UsyS6DjhYg4iZeZqsDa8D3
-                  suggested_fee_multiplier: 1
-                  max_fee: "12380898"
-                  size: 260
-                  memo: SAMPLE MEMO
-                required_public_keys:
-                  - address: STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6
         "400":
           description: Error
           content:
@@ -7565,7 +8137,9 @@ paths:
         - Rosetta
       summary: Submit a Signed Transaction
       operationId: rosetta_construction_submit
-      description: Submit a pre-signed transaction to the node.
+      description: Submit a pre-signed transaction to the node. The examples below are
+        illustrative only. You'll need to use your wallet to generate actual
+        values to use them in the request payload.
       responses:
         "200":
           description: Success
@@ -7611,13 +8185,25 @@ paths:
                 signed_transaction:
                   type: string
                   description: Signed transaction
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              signed_transaction: "0x80800000000400539886f96611ba3ba6cef9618f8c78118b37c5be00\
+                0000000000000000000000000000b400017a33a91515ef48608a99c6adecd2e\
+                b258e11534a1acf66348f5678c8e2c8f83d243555ed67a0019d3500df98563c\
+                a31321c1a675b43ef79f146e322fe08df75103020000000000051a1ae3f911d\
+                8f1d46d7416bfbe4b593fd41eac19cb000000000007a1200000000000000000\
+                0000000000000000000000000000000000000000000000000000"
   /rosetta/v1/construction/payloads:
     post:
       tags:
         - Rosetta
       summary: Generate an Unsigned Transaction and Signing Payloads
       operationId: rosetta_construction_payloads
-      description: Generate and unsigned transaction from operations and metadata
+      description: Generate an unsigned transaction from operations and metadata. The
+        examples below are illustrative only. You'll need to use your wallet to
+        generate actual values to use them in the request payload.
       responses:
         "200":
           description: Success
@@ -7720,6 +8306,22 @@ paths:
                       type: integer
                     recent_block_hash:
                       type: string
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              operations:
+                - operation_identifier:
+                    index: 0
+                    network_index: 0
+                  related_operations:
+                    - index: 0
+                      network_index: 0
+                  type: stack_stx
+                  status: success
+                  account:
+                    address: STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6
+                    metadata: {}
   /rosetta/v1/construction/combine:
     post:
       tags:
@@ -7727,7 +8329,9 @@ paths:
       summary: Create Network Transaction from Signatures
       operationId: rosetta_construction_combine
       description: Take unsigned transaction and signature, combine both and return
-        signed transaction
+        signed transaction. The examples below are illustrative only. You'll
+        need to use your wallet to generate actual values to use them in the
+        request payload.
       responses:
         "200":
           description: Success
@@ -7810,6 +8414,24 @@ paths:
                           - schnorr_poseidon
                       hex_bytes:
                         type: string
+            example:
+              network_identifier:
+                blockchain: stacks
+                network: mainnet
+              unsigned_transaction: 00000000010400539886f96611ba3ba6cef9618f8c78118b37c5be0000000000000000000000000000006400000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000003020000000000051ab71a091b4b8b7661a661c620966ab6573bc2dcd3000000000007a12074657374207472616e73616374696f6e000000000000000000000000000000000000
+              signatures:
+                - signing_payload:
+                    address: string
+                    account_identifier:
+                      address: STB44HYPYAT2BB2QE513NSP81HTMYWBJP02HPGK6
+                      metadata: {}
+                    hex_bytes: string
+                    signature_type: ecdsa
+                  public_key:
+                    hex_bytes: 025c13b2fc2261956d8a4ad07d481b1a3b2cbf93a24f992249a61c3a1c4de79c51
+                    curve_type: secp256k1
+                  signature_type: ecdsa
+                  hex_bytes: string
   "/v2/prices/namespaces/{tld}":
     get:
       summary: Get Namespace Price
@@ -7823,9 +8445,9 @@ paths:
           in: path
           description: the namespace to fetch price for
           required: true
-          example: id
           schema:
             type: string
+            example: id
       responses:
         "200":
           description: Success
@@ -7845,9 +8467,6 @@ paths:
                   amount:
                     type: string
                     pattern: ^[0-9]+$
-              example:
-                units: STX
-                amount: "4000000000"
   "/v2/prices/names/{name}":
     get:
       summary: Get Name Price
@@ -7861,9 +8480,9 @@ paths:
           in: path
           description: the name to query price information for
           required: true
-          example: muneeb.id
           schema:
             type: string
+            example: muneeb.id
       responses:
         "200":
           description: Success
@@ -7883,10 +8502,6 @@ paths:
                   amount:
                     type: string
                     pattern: ^[0-9]+$
-              example:
-                name_price:
-                  units: STX
-                  amount: "100000"
   /v1/namespaces:
     get:
       summary: Get All Namespaces
@@ -7930,17 +8545,17 @@ paths:
           in: path
           description: the namespace to fetch names from.
           required: true
-          example: id
           schema:
             type: string
+            example: id
         - name: page
           in: query
           description: namespace values are defaulted to page 1 with 100 results. You can
             query specific page results by using the 'page' query parameter.
           required: false
-          example: 22
           schema:
             type: integer
+            example: 22
       responses:
         "200":
           description: Success
@@ -7996,9 +8611,9 @@ paths:
           description: names are defaulted to page 1 with 100 results. You can query
             specific page results by using the 'page' query parameter.
           required: false
-          example: 22
           schema:
             type: integer
+            example: 22
       responses:
         "200":
           description: Success
@@ -8041,9 +8656,9 @@ paths:
           in: path
           description: fully-qualified name
           required: true
-          example: muneeb.id
           schema:
             type: string
+            example: muneeb.id
       responses:
         "200":
           description: Success
@@ -8129,9 +8744,9 @@ paths:
           in: path
           description: fully-qualified name
           required: true
-          example: id.blockstack
           schema:
             type: string
+            example: id.blockstack
       responses:
         "200":
           description: Success
@@ -8164,9 +8779,9 @@ paths:
           in: path
           description: fully-qualified name
           required: true
-          example: bar.test
           schema:
             type: string
+            example: bar.test
       responses:
         "200":
           description: Success
@@ -8229,16 +8844,16 @@ paths:
           in: path
           description: fully-qualified name
           required: true
-          example: muneeb.id
           schema:
             type: string
+            example: muneeb.id
         - name: zoneFileHash
           in: path
           description: zone file hash
           required: true
-          example: b100a68235244b012854a95f9114695679002af9
           schema:
             type: string
+            example: b100a68235244b012854a95f9114695679002af9
       responses:
         "200":
           description: Success
@@ -8304,16 +8919,16 @@ paths:
           in: path
           description: the layer-1 blockchain for the address
           required: true
-          example: bitcoin
           schema:
             type: string
+            example: bitcoin
         - name: address
           in: path
           description: the address to lookup
           required: true
-          example: 1QJQxDas5JhdiXhEbNS14iNjr8auFT96GP
           schema:
             type: string
+            example: 1QJQxDas5JhdiXhEbNS14iNjr8auFT96GP
       responses:
         "200":
           description: Success
@@ -8359,19 +8974,21 @@ paths:
           required: true
           schema:
             type: string
+            example: "0x0a83d82a65460a9e711f85a44616350280040b75317dbe486a923c1131b5ff99"
         - name: limit
           in: query
           description: max number of transactions to fetch
           required: false
           schema:
             type: integer
+            example: 10
         - name: offset
           in: query
           description: index of first transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of Transactions
@@ -8397,19 +9014,21 @@ paths:
           required: true
           schema:
             type: integer
+            example: 66119
         - name: limit
           in: query
           description: max number of transactions to fetch
           required: false
           schema:
             type: integer
+            example: 10
         - name: offset
           in: query
           description: index of first transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -8445,19 +9064,21 @@ paths:
           required: true
           schema:
             type: string
+            example: SP197DVH8KTJGX4STM61QN0WJV8Y9QJWXV83ZGNR9
         - name: limit
           in: query
           description: max number of transactions to fetch
           required: false
           schema:
             type: integer
+            example: 90
         - name: offset
           in: query
           description: index of first transaction to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
         - name: unanchored
           in: query
           description: Include transaction data from unanchored (i.e. unconfirmed)
@@ -8482,9 +9103,13 @@ paths:
     get:
       operationId: get_ft_metadata_list
       summary: Fungible tokens metadata list
-      description: Retrieves list of fungible tokens with their metadata. More
-        information on Fungible Tokens on the Stacks blockchain can be found
-        [here](https://docs.stacks.co/write-smart-contracts/tokens#fungible-tokens).
+      deprecated: true
+      description: >
+        **NOTE:** This endpoint is deprecated in favor of the [Token Metadata
+        Service](https://github.com/hirosystems/token-metadata-service).
+
+
+        Retrieves list of fungible tokens with their metadata. More information on Fungible Tokens on the Stacks blockchain can be found [here](https://docs.stacks.co/write-smart-contracts/tokens#fungible-tokens).
       tags:
         - Fungible Tokens
       parameters:
@@ -8500,10 +9125,9 @@ paths:
           in: query
           description: index of first tokens to fetch
           required: false
-          example: 42000
           schema:
             type: integer
-            example: 500
+            example: 42000
       responses:
         "200":
           description: List of fungible tokens metadata
@@ -8621,16 +9245,16 @@ paths:
           in: query
           description: token owner's STX address or Smart Contract ID
           required: true
-          example: SPNWZ5V2TPWGQGVDR6T7B6RQ4XMGZ4PXTEE0VQ0S.marketplace-v3
           schema:
             type: string
+            example: SPNWZ5V2TPWGQGVDR6T7B6RQ4XMGZ4PXTEE0VQ0S.marketplace-v3
         - name: asset_identifiers
           in: query
           description: identifiers of the token asset classes to filter for
           required: false
-          example: SPQZF23W7SEYBFG5JQ496NMY0G7379SRYEDREMSV.Candy::candy
           schema:
             type: array
+            example: SPQZF23W7SEYBFG5JQ496NMY0G7379SRYEDREMSV.Candy::candy
             items:
               type: string
         - name: limit
@@ -8644,10 +9268,10 @@ paths:
           in: query
           description: index of first tokens to fetch
           required: false
-          example: 42000
           schema:
             type: integer
             default: 0
+            example: 42000
         - name: unanchored
           in: query
           description: whether or not to include tokens from unconfirmed transactions
@@ -8974,16 +9598,16 @@ paths:
           in: query
           description: token asset class identifier
           required: true
-          example: SP2X0TZ59D5SZ8ACQ6YMCHHNR2ZN51Z32E2CJ173.the-explorer-guild::The-Explorer-Guild
           schema:
             type: string
+            example: SP2X0TZ59D5SZ8ACQ6YMCHHNR2ZN51Z32E2CJ173.the-explorer-guild::The-Explorer-Guild
         - name: value
           in: query
           description: hex representation of the token's unique value
           required: true
-          example: "0x0100000000000000000000000000000803"
           schema:
             type: string
+            example: "0x0100000000000000000000000000000803"
         - name: limit
           in: query
           description: max number of events to fetch
@@ -8995,18 +9619,18 @@ paths:
           in: query
           description: index of first event to fetch
           required: false
-          example: 42000
           schema:
             type: integer
             default: 0
+            example: 42000
         - name: unanchored
           in: query
           description: whether or not to include events from unconfirmed transactions
           required: false
-          example: true
           schema:
             type: boolean
             default: false
+            example: true
         - name: tx_metadata
           in: query
           description: whether or not to include the complete transaction metadata instead
@@ -9254,9 +9878,9 @@ paths:
           in: query
           description: token asset class identifier
           required: true
-          example: SP2X0TZ59D5SZ8ACQ6YMCHHNR2ZN51Z32E2CJ173.the-explorer-guild::The-Explorer-Guild
           schema:
             type: string
+            example: SP2X0TZ59D5SZ8ACQ6YMCHHNR2ZN51Z32E2CJ173.the-explorer-guild::The-Explorer-Guild
         - name: limit
           in: query
           description: max number of events to fetch
@@ -9268,10 +9892,10 @@ paths:
           in: query
           description: index of first event to fetch
           required: false
-          example: 42000
           schema:
             type: integer
             default: 0
+            example: 42000
         - name: unanchored
           in: query
           description: whether or not to include events from unconfirmed transactions
@@ -9681,9 +10305,13 @@ paths:
     get:
       operationId: get_nft_metadata_list
       summary: Non fungible tokens metadata list
-      description: Retrieves a list of non fungible tokens with their metadata. More
-        information on Non-Fungible Tokens on the Stacks blockchain can be found
-        [here](https://docs.stacks.co/write-smart-contracts/tokens#non-fungible-tokens-nfts).
+      deprecated: true
+      description: >
+        **NOTE:** This endpoint is deprecated in favor of the [Token Metadata
+        Service](https://github.com/hirosystems/token-metadata-service).
+
+
+        Retrieves a list of non fungible tokens with their metadata. More information on Non-Fungible Tokens on the Stacks blockchain can be found [here](https://docs.stacks.co/write-smart-contracts/tokens#non-fungible-tokens-nfts).
       tags:
         - Non-Fungible Tokens
       parameters:
@@ -9693,13 +10321,14 @@ paths:
           required: false
           schema:
             type: integer
+            example: 1
         - name: offset
           in: query
           description: index of first tokens to fetch
           required: false
-          example: 42000
           schema:
             type: integer
+            example: 42000
       responses:
         "200":
           description: List of non fungible tokens metadata
@@ -9787,11 +10416,14 @@ paths:
   "/extended/v1/tokens/{contractId}/nft/metadata":
     get:
       operationId: get_contract_nft_metadata
-      summary: Non fungible tokens metadata for contract id
-      description: Retrieves metadata for non fungible tokens for a given contract id.
-        More information on Non-Fungible Tokens on the Stacks blockchain can be
-        found
-        [here](https://docs.stacks.co/write-smart-contracts/tokens#non-fungible-tokens-nfts).
+      summary: Non fungible tokens metadata for contract ID
+      deprecated: true
+      description: >
+        **NOTE:** This endpoint is deprecated in favor of the [Token Metadata
+        Service](https://github.com/hirosystems/token-metadata-service).
+
+
+        Retrieves metadata for non fungible tokens for a given contract id. More information on Non-Fungible Tokens on the Stacks blockchain can be found [here](https://docs.stacks.co/write-smart-contracts/tokens#non-fungible-tokens-nfts).
       tags:
         - Non-Fungible Tokens
       parameters:
@@ -9861,7 +10493,13 @@ paths:
     get:
       operationId: get_contract_ft_metadata
       summary: Fungible tokens metadata for contract id
-      description: Retrieves the metadata for fungible tokens for a given contract id
+      deprecated: true
+      description: >
+        **NOTE:** This endpoint is deprecated in favor of the [Token Metadata
+        Service](https://github.com/hirosystems/token-metadata-service).
+
+
+        Retrieves the metadata for fungible tokens for a given contract id
       tags:
         - Fungible Tokens
       parameters:
@@ -10163,9 +10801,9 @@ paths:
           in: query
           description: Hash of transaction
           required: false
+          example: "0x29e25515652dad41ef675bd0670964e3d537b80ec19cf6ca6f1dd65d5bc642c5"
           schema:
             type: string
-            example: "0x29e25515652dad41ef675bd0670964e3d537b80ec19cf6ca6f1dd65d5bc642c5"
         - name: address
           in: query
           description: Stacks address or a Contract identifier
@@ -10184,16 +10822,16 @@ paths:
           in: query
           description: number of items to skip
           required: false
-          example: 42000
           schema:
             type: integer
-            example: 50
+            example: 42000
         - name: type
           in: query
           description: Filter the events on event type
           required: false
           schema:
             type: array
+            example: stx_lock
             items:
               type: string
               enum:
@@ -10202,7 +10840,6 @@ paths:
                 - stx_asset
                 - fungible_token_asset
                 - non_fungible_token_asset
-              example: stx_lock
       responses:
         "200":
           description: Success
